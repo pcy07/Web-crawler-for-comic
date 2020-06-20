@@ -1,0 +1,71 @@
+import io
+import os
+import re
+import time
+import json
+import requests
+from PIL import Image
+from bs4 import BeautifulSoup
+
+headers = {
+			'Host': 'manhua.fzdm.com',
+			'Upgrade-Insecure-Requests': '1',
+			'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.67 Safari/537.36',
+			'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3',
+			'Accept-Encoding': 'gzip, deflate, br',
+			'Accept-Language': 'zh,en-US;q=0.9,en;q=0.8,zh-CN;q=0.7',
+			'Cache-Control': 'max-age=0',
+			'Connection': 'keep-alive'
+			}
+      
+# traverse pages on manhua.fzdm.com
+def Spider(savepath):
+    if not os.path.exists(savepath):
+        os.mkdir(savepath)#save dir
+
+    cur_ch = 939     ## start chapter
+    end_ch = 959     ## end chapter
+    
+    pages = 20 ## assume 20 pages every chapter
+    
+    for ch in range(cur_ch, end_ch+1):
+        print('[INFO]: Start to download chapter %s...' % str(ch))
+        for p in range(pages):
+            if p == 0:
+                page_url = 'https://manhua.fzdm.com/2/' + str(ch) + '/'   ## 2: op
+                #https://manhua.fzdm.com/2/938/
+                DownloadChapter(os.path.join(savepath, str(ch)), page_url, 1)   
+                time.sleep(0.2)
+            else:
+                page_url = 'https://manhua.fzdm.com/2/' + str(ch) + '/index_' + str(p) + '.html'
+                #https://manhua.fzdm.com/2/960/index_1.html
+                if not DownloadChapter(os.path.join(savepath, str(ch)), page_url, p+1): break   #
+                time.sleep(0.2)
+    
+# download pic 
+def DownloadChapter(savepath, chapter_url, pg):
+    if not os.path.exists(savepath):
+        os.mkdir(savepath)
+        
+    res = requests.get(chapter_url, headers=headers)
+    res.encoding = 'utf-8'
+    img_urls = re.findall(r'var mhurl="(.*?)"', res.text)   
+    #var mhurl="2019/03/29054814297152.jpg"
+    
+    if not img_urls: return False
+    
+    real_url = 'http://p1.manhuapan.com/' + img_urls[0] #pic url
+    #print(real_url)
+    print('[INFO]: downloading page %s...' % str(pg))
+    img_content = requests.get(real_url).content
+    name = str(pg) + '.jpg'
+    filename = os.path.join(savepath, name)
+    img = Image.open(io.BytesIO(img_content)).convert('RGB')
+    #if img.mode is 'RGB':
+    img.save(filename)
+    return True
+    
+# main function
+if __name__ == '__main__':
+    savepath = 'comic' 
+    Spider(savepath)
