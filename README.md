@@ -1,2 +1,2 @@
 # Web-crawler-for-comic
-Web crawler for One piece
+Web crawler for One Piece
